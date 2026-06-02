@@ -23,14 +23,7 @@ app.get('/', (req, res) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Minecraft Tracker - NameMC Edition</title>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-        
-        <script src="https://cdn.jsdelivr.net/npm/skinview3d@2.1.2/dist/skinview3d.bundle.js"></script>
-        <script>
-            if (typeof skinview3d === 'undefined') {
-                document.write('<script src="https://unpkg.com/skinview3d@2.1.2/bundle/skinview3d.bundle.js"><\\/script>');
-            }
-        </script>
-
+        <script src="https://unpkg.com/skinview3d@2.1.2/dist/skinview3d.bundle.js"></script>
         <style>
             :root {
                 --bg: #08080c;
@@ -177,45 +170,18 @@ app.get('/', (req, res) => {
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                min-height: 480px;
+                min-height: 450px;
                 position: relative;
             }
 
             #skin-viewer {
                 width: 100%;
-                height: 360px;
+                height: 380px;
                 cursor: grab;
                 outline: none;
-                /* FIX IPAD : Bloque le défilement de la page pendant qu'on manipule le skin */
-                touch-action: none; 
+                touch-action: none;
             }
             #skin-viewer:active { cursor: grabbing; }
-
-            /* Boutons de contrôle d'animation comme NameMC */
-            .skin-controls {
-                display: flex;
-                gap: 8px;
-                margin-top: 10px;
-                z-index: 5;
-            }
-
-            .skin-controls button {
-                background: rgba(255, 255, 255, 0.03);
-                border: 1px solid var(--border);
-                color: var(--text-main);
-                padding: 6px 12px;
-                border-radius: 8px;
-                cursor: pointer;
-                font-size: 12px;
-                font-weight: 600;
-                transition: all 0.2s;
-            }
-
-            .skin-controls button:hover {
-                background: var(--accent);
-                color: #000;
-                border-color: var(--accent);
-            }
 
             .cape-container { display: flex; gap: 12px; flex-wrap: wrap; }
             .cape-item {
@@ -288,12 +254,6 @@ app.get('/', (req, res) => {
                     <i class="fa-solid fa-cube"></i> Rendu 3D Interactif
                 </div>
                 <canvas id="skin-viewer"></canvas>
-                
-                <div class="skin-controls">
-                    <button onclick="changeAnimation('idle')"><i class="fa-solid fa-bed"></i> Statique</button>
-                    <button onclick="changeAnimation('walk')"><i class="fa-solid fa-person-walking"></i> Marche</button>
-                    <button onclick="changeAnimation('run')"><i class="fa-solid fa-person-running"></i> Course</button>
-                </div>
             </div>
 
             <div class="panel">
@@ -310,14 +270,13 @@ app.get('/', (req, res) => {
         <script>
             let skinViewerInstance = null;
 
-            function changeAnimation(type) {
-                if (!skinViewerInstance) return;
-                if (type === 'idle') skinViewerInstance.animation = new skinview3d.IdleAnimation();
-                if (type === 'walk') skinViewerInstance.animation = new skinview3d.WalkingAnimation();
-                if (type === 'run') skinViewerInstance.animation = new skinview3d.RunningAnimation();
-            }
-
             async function trackPlayer() {
+                // Vérification si la bibliothèque est bien chargée avant de lancer le script
+                if (typeof skinview3d === 'undefined') {
+                    alert("Erreur : Le moteur de rendu 3D n'a pas pu être récupéré depuis le CDN. Essaye de recharger la page ou change de réseau.");
+                    return;
+                }
+
                 const pseudo = document.getElementById('username').value.trim();
                 if(!pseudo) return;
 
@@ -346,10 +305,6 @@ app.get('/', (req, res) => {
                         
                         skinViewerInstance.animation = new skinview3d.IdleAnimation();
                         skinViewerInstance.controls.enableZoom = false;
-                        
-                        // CONFIGURATION AUTOMATIQUE NAMEMC
-                        skinViewerInstance.autoRotate = true;
-                        skinViewerInstance.autoRotateSpeed = 0.5; 
                     } else {
                         skinViewerInstance.loadSkin(skinTexture);
                     }
@@ -403,34 +358,25 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. BACKEND API : Récupération sécurisée et complète
+// 2. BACKEND API : Utilisation d'Ashcon API pour contourner les blocages de Render
 app.get('/api/player/:pseudo', async (req, res) => {
     try {
         const name = req.params.pseudo;
         
-        const profileRes = await axios.get(`https://api.mojang.com/users/profiles/minecraft/${name}`);
-        if (!profileRes.data || !profileRes.data.id) {
+        // Appel à l'API alternative qui n'est pas bloquée par Cloudflare / Mojang
+        const response = await axios.get(`https://api.ashcon.app/mojang/v2/user/${name}`);
+        
+        if (!response.data || !response.data.uuid) {
             return res.status(404).json({ error: "Joueur introuvable" });
         }
-        const uuid = profileRes.data.id;
-        const exactPseudo = profileRes.data.name;
 
-        const sessionRes = await axios.get(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}`);
-        
-        let skinUrl = null;
-        let capeUrl = null;
+        const data = response.data;
+        const uuid = data.uuid.replace(/-/g, ''); // Nettoyage des tirets pour correspondre à ta base locale
+        const exactPseudo = data.username;
+        const skinUrl = data.textures?.skin?.url || null;
+        const capeUrl = data.textures?.cape?.url || null;
 
-        if (sessionRes.data && sessionRes.data.properties) {
-            const textureProp = sessionRes.data.properties.find(p => p.name === 'textures');
-            if (textureProp) {
-                const texturesJson = JSON.parse(Buffer.from(textureProp.value, 'base64').toString('utf-8'));
-                if (texturesJson.textures) {
-                    skinUrl = texturesJson.textures.SKIN?.url || null;
-                    capeUrl = texturesJson.textures.CAPE?.url || null;
-                }
-            }
-        }
-
+        // Récupération des statistiques locales simulées
         const localData = database[uuid] || { 
             totalTime: 0, 
             lastServer: "Inconnu (Mod déconnecté)", 
@@ -446,13 +392,13 @@ app.get('/api/player/:pseudo', async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Erreur serveur API:", error.message);
-        return res.status(500).json({ error: "Erreur serveur interne" });
+        console.error("Erreur serveur API Ashcon:", error.message);
+        return res.status(500).json({ error: "Le joueur n'existe pas ou l'API est surchargée." });
     }
 });
 
-// 3. ECOUTE DU PORT DE DEPLOYEMENT (RENDER)
+// 3. ÉCOUTE DU PORT (Fermeture et liaison indispensables pour Render)
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-    console.log(`Serveur en cours d'exécution sur le port ${PORT}`);
+    console.log(`Serveur actif sur le port ${PORT}`);
 });
