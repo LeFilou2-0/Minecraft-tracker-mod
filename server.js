@@ -13,7 +13,7 @@ let database = {
     }
 };
 
-// 1. INTERFACE GRAPHIQUE STYLE NAMEMC
+// 1. INTERFACE GRAPHIQUE STYLE NAMEMC x V2 NEON
 app.get('/', (req, res) => {
     res.send(`
     <!DOCTYPE html>
@@ -24,16 +24,9 @@ app.get('/', (req, res) => {
         <title>Minecraft Tracker - NameMC Edition</title>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
         
-        <script src="https://fastly.jsdelivr.net/npm/skinview3d@2.1.2/dist/skinview3d.bundle.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/skinview3d@2.1.2/dist/skinview3d.bundle.js"></script>
         <script>
             if (typeof skinview3d === 'undefined') {
-                // Si Fastly est bloqué, on tente GCore
-                document.write('<script src="https://gcore.jsdelivr.net/npm/skinview3d@2.1.2/dist/skinview3d.bundle.js"><\\/script>');
-            }
-        </script>
-        <script>
-            if (typeof skinview3d === 'undefined') {
-                // Si GCore est aussi bloqué, on tente un troisième miroir (Unpkg alternatif)
                 document.write('<script src="https://unpkg.com/skinview3d@2.1.2/bundle/skinview3d.bundle.js"><\\/script>');
             }
         </script>
@@ -184,20 +177,47 @@ app.get('/', (req, res) => {
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                min-height: 450px;
+                min-height: 480px;
                 position: relative;
             }
 
             #skin-viewer {
                 width: 100%;
-                height: 380px;
+                height: 360px;
                 cursor: grab;
                 outline: none;
+                /* FIX IPAD : Bloque le défilement de la page pendant qu'on manipule le skin */
+                touch-action: none; 
             }
             #skin-viewer:active { cursor: grabbing; }
 
-            .cape-container { display: flex; gap: 12px; flex-wrap: wrap; }
+            /* Boutons de contrôle d'animation comme NameMC */
+            .skin-controls {
+                display: flex;
+                gap: 8px;
+                margin-top: 10px;
+                z-index: 5;
+            }
 
+            .skin-controls button {
+                background: rgba(255, 255, 255, 0.03);
+                border: 1px solid var(--border);
+                color: var(--text-main);
+                padding: 6px 12px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 12px;
+                font-weight: 600;
+                transition: all 0.2s;
+            }
+
+            .skin-controls button:hover {
+                background: var(--accent);
+                color: #000;
+                border-color: var(--accent);
+            }
+
+            .cape-container { display: flex; gap: 12px; flex-wrap: wrap; }
             .cape-item {
                 background: rgba(163, 230, 53, 0.04);
                 border: 1px dashed var(--accent);
@@ -212,7 +232,6 @@ app.get('/', (req, res) => {
             }
 
             .no-cape { color: var(--text-muted); font-size: 14px; font-style: italic; }
-
             .history-box { grid-column: span 2; }
             .history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
 
@@ -269,6 +288,12 @@ app.get('/', (req, res) => {
                     <i class="fa-solid fa-cube"></i> Rendu 3D Interactif
                 </div>
                 <canvas id="skin-viewer"></canvas>
+                
+                <div class="skin-controls">
+                    <button onclick="changeAnimation('idle')"><i class="fa-solid fa-bed"></i> Statique</button>
+                    <button onclick="changeAnimation('walk')"><i class="fa-solid fa-person-walking"></i> Marche</button>
+                    <button onclick="changeAnimation('run')"><i class="fa-solid fa-person-running"></i> Course</button>
+                </div>
             </div>
 
             <div class="panel">
@@ -285,21 +310,20 @@ app.get('/', (req, res) => {
         <script>
             let skinViewerInstance = null;
 
+            function changeAnimation(type) {
+                if (!skinViewerInstance) return;
+                if (type === 'idle') skinViewerInstance.animation = new skinview3d.IdleAnimation();
+                if (type === 'walk') skinViewerInstance.animation = new skinview3d.WalkingAnimation();
+                if (type === 'run') skinViewerInstance.animation = new skinview3d.RunningAnimation();
+            }
+
             async function trackPlayer() {
                 const pseudo = document.getElementById('username').value.trim();
                 if(!pseudo) return;
 
-                if (typeof skinview3d === 'undefined') {
-                    alert("Erreur de connexion : Impossible de charger le moteur de rendu 3D. Vérifie ta connexion internet ou change de réseau.");
-                    return;
-                }
-
                 try {
                     const response = await fetch('/api/player/' + pseudo);
-                    if(!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || "Joueur introuvable.");
-                    }
+                    if(!response.ok) throw new Error();
                     const data = await response.json();
 
                     document.getElementById('player-head').src = "https://mc-heads.net/avatar/" + data.uuid + "/64";
@@ -322,10 +346,10 @@ app.get('/', (req, res) => {
                         
                         skinViewerInstance.animation = new skinview3d.IdleAnimation();
                         skinViewerInstance.controls.enableZoom = false;
-
-                        // Rotation continue automatique activée !
+                        
+                        // CONFIGURATION AUTOMATIQUE NAMEMC
                         skinViewerInstance.autoRotate = true;
-                        skinViewerInstance.autoRotateSpeed = 0.6;
+                        skinViewerInstance.autoRotateSpeed = 0.5; 
                     } else {
                         skinViewerInstance.loadSkin(skinTexture);
                     }
@@ -370,7 +394,7 @@ app.get('/', (req, res) => {
                     document.getElementById('main-interface').style.display = 'grid';
 
                 } catch (err) {
-                    alert(err.message || "Impossible de charger le profil.");
+                    alert("Impossible de charger le profil complet de ce joueur.");
                 }
             }
         </script>
@@ -379,14 +403,14 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. BACKEND API
+// 2. BACKEND API : Récupération sécurisée et complète
 app.get('/api/player/:pseudo', async (req, res) => {
     try {
         const name = req.params.pseudo;
         
         const profileRes = await axios.get(`https://api.mojang.com/users/profiles/minecraft/${name}`);
         if (!profileRes.data || !profileRes.data.id) {
-            return res.status(404).json({ error: "Joueur introuvable sur Mojang." });
+            return res.status(404).json({ error: "Joueur introuvable" });
         }
         const uuid = profileRes.data.id;
         const exactPseudo = profileRes.data.name;
@@ -422,16 +446,13 @@ app.get('/api/player/:pseudo', async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Erreur API Mojang:", error.message);
-        if (error.response && error.response.status === 404) {
-            return res.status(404).json({ error: "Ce pseudo n'existe pas." });
-        }
-        return res.status(500).json({ error: "Erreur de communication avec Mojang. Réessaye." });
+        console.error("Erreur serveur API:", error.message);
+        return res.status(500).json({ error: "Erreur serveur interne" });
     }
 });
 
-// 3. ECOUTE DU PORT
+// 3. ECOUTE DU PORT DE DEPLOYEMENT (RENDER)
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-    console.log(`Serveur actif sur le port ${PORT}`);
+    console.log(`Serveur en cours d'exécution sur le port ${PORT}`);
 });
