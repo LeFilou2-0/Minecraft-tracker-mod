@@ -364,8 +364,6 @@ app.get('/', (req, res) => {
                     const historyWrapper = document.getElementById('history-wrapper');
                     historyWrapper.innerHTML = ''; // Clear ancien
 
-                    // On génère 3 versions pour illustrer la frise chronologique (Actuel + Historique)
-                    // Utilise le skin actuel pour la démo, changeant selon l'UUID recherché
                     const skinTemplates = [
                         { label: "Actuel", date: "Aujourd'hui" },
                         { label: "#2", date: "Janv. 2026" },
@@ -375,9 +373,10 @@ app.get('/', (req, res) => {
                     skinTemplates.forEach((skin, index) => {
                         const card = document.createElement('div');
                         card.className = 'history-card';
+                        // CORRECTION ICI : Ajout de l'anti-slash devant data.uuid pour éviter le crash Node.js
                         card.innerHTML = \`
                             <div class="history-number">\${skin.label}</div>
-                            <img src="https://visage.surgeplay.com/bust/120/${data.uuid}" alt="Skin body">
+                            <img src="https://visage.surgeplay.com/bust/120/\${data.uuid}" alt="Skin body">
                             <div class="history-date">\${skin.date}</div>
                         \`;
                         historyWrapper.appendChild(card);
