@@ -47,7 +47,6 @@ app.get('/', (req, res) => {
                 background: radial-gradient(circle at top, #11111e 0%, #050508 100%);
             }
 
-            /* Barre de recherche supérieure */
             .search-box {
                 display: flex;
                 gap: 12px;
@@ -90,17 +89,15 @@ app.get('/', (req, res) => {
                 box-shadow: 0 6px 20px rgba(163, 230, 53, 0.25);
             }
 
-            /* Conteneur principal en Grille (Style NameMC) */
             .namemc-grid {
                 display: grid;
                 grid-template-columns: 1fr 1.2fr;
                 gap: 24px;
                 width: 100%;
                 max-width: 1000px;
-                display: none; /* Masqué avant la recherche */
+                display: none;
             }
 
-            /* Blocs/Briques modulaires */
             .panel {
                 background: var(--panel-bg);
                 border: 1px solid var(--border);
@@ -127,7 +124,6 @@ app.get('/', (req, res) => {
                 color: var(--accent);
             }
 
-            /* Colonne Gauche - Infos de profil */
             .profile-header {
                 display: flex;
                 align-items: center;
@@ -174,7 +170,6 @@ app.get('/', (req, res) => {
             .info-value { font-weight: 600; }
             .info-value.neon { color: var(--accent); }
 
-            /* Colonne Droite - Grand rendu de Skin VRAI 3D */
             .skin-render-box {
                 grid-row: span 2;
                 display: flex;
@@ -185,7 +180,6 @@ app.get('/', (req, res) => {
                 position: relative;
             }
 
-            /* Zone Canvas pour le contrôle à la souris */
             #skin-viewer {
                 width: 100%;
                 height: 380px;
@@ -196,7 +190,6 @@ app.get('/', (req, res) => {
                 cursor: grabbing;
             }
 
-            /* Bloc Capes personnalisé */
             .cape-container {
                 display: flex;
                 gap: 12px;
@@ -204,16 +197,19 @@ app.get('/', (req, res) => {
             }
 
             .cape-item {
-                background: rgba(163, 230, 53, 0.04);
-                border: 1px dashed var(--accent);
-                border-radius: 10px;
-                padding: 10px 16px;
-                display: inline-flex;
+                display: flex;
                 align-items: center;
-                gap: 8px;
-                font-size: 13px;
-                color: var(--accent);
-                font-weight: bold;
+                gap: 12px;
+                background: rgba(163, 230, 53, 0.04);
+                border: 1px solid var(--accent);
+                border-radius: 12px;
+                padding: 10px 16px;
+            }
+
+            .cape-img {
+                height: 45px;
+                image-rendering: pixelated;
+                filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.4));
             }
 
             .no-cape {
@@ -222,7 +218,6 @@ app.get('/', (req, res) => {
                 font-style: italic;
             }
 
-            /* Ligne du bas - Historique des Skins */
             .history-box {
                 grid-column: span 2;
             }
@@ -314,20 +309,17 @@ app.get('/', (req, res) => {
 
             <div class="panel">
                 <div class="panel-title"><i class="fa-solid fa-shield-halved"></i> Capes Alignées</div>
-                <div id="cape-wrapper" class="cape-container">
-                    </div>
+                <div id="cape-wrapper" class="cape-container"></div>
             </div>
 
             <div class="panel history-box">
                 <div class="panel-title"><i class="fa-solid fa-clock-rotate-left"></i> Historique des Skins</div>
-                <div class="history-grid" id="history-wrapper">
-                    </div>
+                <div class="history-grid" id="history-wrapper"></div>
             </div>
 
         </div>
 
         <script>
-            // Variable globale pour conserver l'instance 3D
             let skinViewerInstance = null;
 
             async function trackPlayer() {
@@ -339,17 +331,14 @@ app.get('/', (req, res) => {
                     if(!response.ok) throw new Error();
                     const data = await response.json();
 
-                    // 1. Remplissage du Bloc Profil
                     document.getElementById('player-head').src = "https://mc-heads.net/avatar/" + data.uuid + "/64";
                     document.getElementById('player-name').innerText = data.pseudo;
                     document.getElementById('player-uuid').innerText = data.uuid;
                     
-                    // Stats issues de ton mod .jar
                     document.getElementById('player-time').innerText = data.stats.totalTime + " min";
                     document.getElementById('player-server').innerText = data.stats.lastServer;
                     document.getElementById('player-last-login').innerText = data.stats.lastLogin;
 
-                    // 2. INITIALISATION OU MISE A JOUR DU COMPOSANT VRAI 3D (Type NameMC)
                     const skinTexture = data.skinUrl || "https://textures.minecraft.net/texture/1a12bc553b965b263b6107eb1b5042643a6d956e18751347000788647ba944";
                     
                     if (!skinViewerInstance) {
@@ -360,37 +349,40 @@ app.get('/', (req, res) => {
                             skin: skinTexture
                         });
                         
-                        // Active une animation fluide de respiration lente
                         skinViewerInstance.animation = new skinview3d.IdleAnimation();
-                        // Bloque le zoom molette pour éviter de casser le défilement de la page
+                        
+                        // FIX PERMETTANT DE FAIRE TOURNER LE SKIN POUR VOIR LA CAPE DANS LE DOS (STYLE NAMEMC)
+                        skinViewerInstance.autoRotate = true;
+                        skinViewerInstance.autoRotateSpeed = 0.8;
                         skinViewerInstance.controls.enableZoom = false;
                     } else {
-                        // Si le viewer existe déjà, on charge juste la texture du nouveau joueur recherché
                         skinViewerInstance.loadSkin(skinTexture);
                     }
 
-                    // Prise en compte de la cape directement posée sur le dos du modèle 3D !
                     if (data.capeUrl) {
                         skinViewerInstance.loadCape(data.capeUrl);
                     } else {
                         skinViewerInstance.loadCape(null);
                     }
 
-                    // 3. Gestion dynamique de la liste des capes (Design épuré sous le profil)
+                    // GENERATION VISUELLE DE LA CAPE (AVEC MINIATURE DE LA TEXTURE REELLEMENT ROTATIVE)
                     const capeWrapper = document.getElementById('cape-wrapper');
                     if (data.capeUrl) {
                         capeWrapper.innerHTML = \`
                             <div class="cape-item">
-                                <i class="fa-solid fa-gavel"></i> Cape Officielle Mojang
+                                <img src="\${data.capeUrl}" class="cape-img" alt="Cape Texture">
+                                <div style="text-align: left;">
+                                    <span style="display: block; font-size: 13px; color: var(--accent); font-weight: bold;">Cape Officielle</span>
+                                    <span style="font-size: 11px; color: var(--text-muted);">Synchronisée</span>
+                                </div>
                             </div>
                         \`;
                     } else {
                         capeWrapper.innerHTML = '<span class="no-cape">Aucune cape détectée sur ce compte.</span>';
                     }
 
-                    // 4. Génération de l'historique des skins
                     const historyWrapper = document.getElementById('history-wrapper');
-                    historyWrapper.innerHTML = ''; // Nettoyage
+                    historyWrapper.innerHTML = ''; 
 
                     const skinTemplates = [
                         { label: "Actuel", date: "Aujourd'hui" },
@@ -398,7 +390,7 @@ app.get('/', (req, res) => {
                         { label: "#1", date: "Création" }
                     ];
 
-                    skinTemplates.forEach((skin, index) => {
+                    skinTemplates.forEach((skin) => {
                         const card = document.createElement('div');
                         card.className = 'history-card';
                         card.innerHTML = \`
@@ -409,7 +401,6 @@ app.get('/', (req, res) => {
                         historyWrapper.appendChild(card);
                     });
 
-                    // Rendre visible toute la structure NameMC d'un coup
                     document.getElementById('main-interface').style.display = 'grid';
 
                 } catch (err) {
@@ -422,7 +413,7 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. BACKEND API : Récupération sécurisée et complète
+// 2. BACKEND API : Récupération sécurisée complète et corrigée (Fin de fichier restaurée)
 app.get('/api/player/:pseudo', async (req, res) => {
     try {
         const name = req.params.pseudo;
@@ -465,3 +456,28 @@ app.get('/api/player/:pseudo', async (req, res) => {
         });
 
     } catch (error) {
+        console.error("Erreur API Mojang:", error.message);
+        res.status(500).json({ error: "Erreur lors de la récupération des données" });
+    }
+});
+
+// 3. RECEPTION DES DONNEES DEPUIS LE MOD MINECRAFT (.JAR)
+app.post('/api/update-stats', (req, res) => {
+    const { uuid, serverIp, playTimeDelta } = req.body;
+    if(!uuid) return res.status(400).send("UUID manquant");
+    
+    if(!database[uuid]) {
+        database[uuid] = { totalTime: 0, lastServer: "", lastLogin: "" };
+    }
+    database[uuid].totalTime += playTimeDelta;
+    database[uuid].lastServer = serverIp;
+    database[uuid].lastLogin = new Date().toLocaleDateString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    
+    res.status(200).json({ status: "synced" });
+});
+
+// Port d'écoute configuré par défaut pour Render
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`==> Serveur en cours d'exécution sur le port ${PORT}`);
+});
