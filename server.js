@@ -20,6 +20,7 @@ app.get('/', (req, res) => {
     <html lang="fr">
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Minecraft Tracker Pro - V2</title>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
         <style>
@@ -63,6 +64,7 @@ app.get('/', (req, res) => {
                 outline: none;
                 transition: all 0.3s;
                 backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
             }
 
             .search-input:focus {
@@ -114,15 +116,15 @@ app.get('/', (req, res) => {
                 margin: 0 auto 30px auto;
             }
 
-            /* Rendu de la tête du Skin */
+            /* CORRECTION : Style pour la vraie balise image */
             .avatar {
                 width: 100%;
                 height: 100%;
                 border-radius: 24px;
                 border: 2px solid var(--accent);
-                background-size: cover;
-                background-position: center;
                 box-shadow: 0 0 35px rgba(163, 230, 53, 0.2);
+                object-fit: contain;
+                background: rgba(0, 0, 0, 0.2);
             }
 
             h1 {
@@ -207,7 +209,7 @@ app.get('/', (req, res) => {
 
         <div class="card" id="player-card">
             <div class="avatar-wrapper">
-                <div class="avatar" id="player-avatar"></div>
+                <img class="avatar" id="player-avatar" src="" alt="Skin Head">
             </div>
             <h1 id="player-name">Pseudo</h1>
             <div class="uuid" id="player-uuid">UUID</div>
@@ -240,8 +242,8 @@ app.get('/', (req, res) => {
                     if(!response.ok) throw new Error();
                     const data = await response.json();
 
-                    // Rendre l'avatar (On utilise l'API de visages Crafatar basée sur l'UUID pour un rendu 2D parfait de la tête)
-                    document.getElementById('player-avatar').style.backgroundImage = "url('https://crafatar.com/avatars/" + data.uuid + "?size=120&overlay')";
+                    // CORRECTION : Attribution propre du src avec l'API MC-Heads (anti-bug mobile)
+                    document.getElementById('player-avatar').src = "https://mc-heads.net/avatar/" + data.uuid + "/120";
                     
                     document.getElementById('player-name').innerText = data.pseudo;
                     document.getElementById('player-uuid').innerText = data.uuid;
@@ -268,12 +270,11 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. L'API BACKEND COMPLÈTE & SÉCURISÉE (Correction robuste pour Mojang)
+// 2. L'API BACKEND COMPLÈTE & SÉCURISÉE
 app.get('/api/player/:pseudo', async (req, res) => {
     try {
         const name = req.params.pseudo;
         
-        // Étape A : Obtenir l'UUID de manière sûre
         const profileRes = await axios.get(`https://api.mojang.com/users/profiles/minecraft/${name}`);
         if (!profileRes.data || !profileRes.data.id) {
             return res.status(404).json({ error: "Joueur inexistant" });
@@ -281,13 +282,11 @@ app.get('/api/player/:pseudo', async (req, res) => {
         const uuid = profileRes.data.id;
         const exactPseudo = profileRes.data.name;
 
-        // Étape B : Obtenir le profil de session complet (Textures)
         const sessionRes = await axios.get(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}`);
         
         let skinUrl = null;
         let capeUrl = null;
 
-        // Extraction ultra-sécurisée du Base64 pour éviter les crashs si pas de skin/cape
         if (sessionRes.data && sessionRes.data.properties) {
             const textureProp = sessionRes.data.properties.find(p => p.name === 'textures');
             if (textureProp) {
@@ -299,14 +298,12 @@ app.get('/api/player/:pseudo', async (req, res) => {
             }
         }
 
-        // Étape C : Récupération des statistiques locales de ton Mod
         const localData = database[uuid] || { 
             totalTime: 0, 
             lastServer: "Aucun (Mod non installé)", 
             lastLogin: "Aucune session enregistrée" 
         };
 
-        // Envoi de la réponse complète et structurée au format JSON
         res.json({
             pseudo: exactPseudo,
             uuid: uuid,
