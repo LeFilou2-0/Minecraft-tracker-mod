@@ -23,7 +23,9 @@ app.get('/', (req, res) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Minecraft Tracker - NameMC Edition</title>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-        <script src="https://unpkg.com/skinview3d@2.1.2/dist/skinview3d.bundle.js"></script>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/skinview3d/3.0.1/skinview3d.bundle.js"></script>
+        
         <style>
             :root {
                 --bg: #08080c;
@@ -271,9 +273,9 @@ app.get('/', (req, res) => {
             let skinViewerInstance = null;
 
             async function trackPlayer() {
-                // Vérification si la bibliothèque est bien chargée avant de lancer le script
+                // Vérification de sécurité pour le chargement du CDN sur mobile
                 if (typeof skinview3d === 'undefined') {
-                    alert("Erreur : Le moteur de rendu 3D n'a pas pu être récupéré depuis le CDN. Essaye de recharger la page ou change de réseau.");
+                    alert("Le moteur 3D externe n'est pas encore prêt. Réessaye dans un instant.");
                     return;
                 }
 
@@ -349,7 +351,7 @@ app.get('/', (req, res) => {
                     document.getElementById('main-interface').style.display = 'grid';
 
                 } catch (err) {
-                    alert("Impossible de charger le profil complet de ce joueur.");
+                    alert("Impossible de charger le profil de ce joueur. Vérifie le pseudo.");
                 }
             }
         </script>
@@ -358,12 +360,12 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. BACKEND API : Utilisation d'Ashcon API pour contourner les blocages de Render
+// 2. BACKEND API : Utilisation de Ashcon bypassant les limites de Render
 app.get('/api/player/:pseudo', async (req, res) => {
     try {
         const name = req.params.pseudo;
         
-        // Appel à l'API alternative qui n'est pas bloquée par Cloudflare / Mojang
+        // Utilisation de l'API alternative stable
         const response = await axios.get(`https://api.ashcon.app/mojang/v2/user/${name}`);
         
         if (!response.data || !response.data.uuid) {
@@ -371,12 +373,13 @@ app.get('/api/player/:pseudo', async (req, res) => {
         }
 
         const data = response.data;
-        const uuid = data.uuid.replace(/-/g, ''); // Nettoyage des tirets pour correspondre à ta base locale
+        
+        // Nettoyage de l'UUID (retrait des tirets pour correspondre à ta base locale)
+        const uuid = data.uuid.replace(/-/g, '');
         const exactPseudo = data.username;
         const skinUrl = data.textures?.skin?.url || null;
         const capeUrl = data.textures?.cape?.url || null;
 
-        // Récupération des statistiques locales simulées
         const localData = database[uuid] || { 
             totalTime: 0, 
             lastServer: "Inconnu (Mod déconnecté)", 
@@ -392,12 +395,12 @@ app.get('/api/player/:pseudo', async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Erreur serveur API Ashcon:", error.message);
-        return res.status(500).json({ error: "Le joueur n'existe pas ou l'API est surchargée." });
+        console.error("Erreur API Tracker :", error.message);
+        return res.status(500).json({ error: "Erreur lors de la récupération des données." });
     }
 });
 
-// 3. ÉCOUTE DU PORT (Fermeture et liaison indispensables pour Render)
+// 3. LANCEMENT DU SERVEUR
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`Serveur actif sur le port ${PORT}`);
