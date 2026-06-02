@@ -345,8 +345,8 @@ app.get('/', (req, res) => {
                     document.getElementById('player-server').innerText = data.stats.lastServer;
                     document.getElementById('player-last-login').innerText = data.stats.lastLogin;
 
-                    // 2. Remplissage du grand corps complet en 3D Isométrique
-                    document.getElementById('skin-3d').src = "https://mc-heads.net/player/" + data.uuid + "/400";
+                    // 2. Remplissage du grand corps complet en 3D Isométrique (VRAI 3D)
+                    document.getElementById('skin-3d').src = "https://visage.surgeplay.com/full/400/" + data.uuid;
 
                     // 3. Gestion dynamique des capes (Design épuré)
                     const capeWrapper = document.getElementById('cape-wrapper');
@@ -377,7 +377,7 @@ app.get('/', (req, res) => {
                         card.className = 'history-card';
                         card.innerHTML = \`
                             <div class="history-number">\${skin.label}</div>
-                            <img src="https://mc-heads.net/body/\${data.uuid}/120" alt="Skin body">
+                            <img src="https://visage.surgeplay.com/bust/120/${data.uuid}" alt="Skin body">
                             <div class="history-date">\${skin.date}</div>
                         \`;
                         historyWrapper.appendChild(card);
