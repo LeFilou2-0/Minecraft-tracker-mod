@@ -23,7 +23,7 @@ app.get('/', (req, res) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Minecraft Tracker - NameMC Edition</title>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-        <script src="https://cdn.jsdelivr.net/npm/skinview3d@2.1.2/dist/skinview3d.bundle.js"></script>
+        <script src="https://unpkg.com/skinview3d@2.1.2/dist/skinview3d.bundle.js"></script>
         <style>
             :root {
                 --bg: #08080c;
@@ -275,11 +275,17 @@ app.get('/', (req, res) => {
                 const pseudo = document.getElementById('username').value.trim();
                 if(!pseudo) return;
 
+                // Sécurité si le script externe n'a pas pu charger du tout
+                if (typeof skinview3d === 'undefined') {
+                    alert("Erreur de connexion : Impossible de charger le moteur de rendu 3D. Vérifie ta connexion internet.");
+                    return;
+                }
+
                 try {
                     const response = await fetch('/api/player/' + pseudo);
                     if(!response.ok) {
                         const errorData = await response.json();
-                        throw new Error(errorData.error || "Erreur inconnue");
+                        throw new Error(errorData.error || "Joueur introuvable ou problème API.");
                     }
                     const data = await response.json();
 
@@ -304,9 +310,9 @@ app.get('/', (req, res) => {
                         skinViewerInstance.animation = new skinview3d.IdleAnimation();
                         skinViewerInstance.controls.enableZoom = false;
 
-                        // CORRECTION : On force le personnage à tourner sur lui-même pour voir son dos (et sa cape !)
+                        // AJOUT : Fait tourner automatiquement le skin pour voir le dos et la cape !
                         skinViewerInstance.autoRotate = true;
-                        skinViewerInstance.autoRotateSpeed = 0.8;
+                        skinViewerInstance.autoRotateSpeed = 0.6;
                     } else {
                         skinViewerInstance.loadSkin(skinTexture);
                     }
@@ -321,11 +327,11 @@ app.get('/', (req, res) => {
                     if (data.capeUrl) {
                         capeWrapper.innerHTML = \`
                             <div class="cape-item">
-                                <i class="fa-solid fa-gavel"></i> Cape Officielle détectée
+                                <i class="fa-solid fa-gavel"></i> Cape Officielle Mojang
                             </div>
                         \`;
                     } else {
-                        capeWrapper.innerHTML = '<span class="no-cape">Aucune cape détectée ou impossible à charger via Render.</span>';
+                        capeWrapper.innerHTML = '<span class="no-cape">Aucune cape détectée sur ce compte.</span>';
                     }
 
                     const historyWrapper = document.getElementById('history-wrapper');
@@ -351,7 +357,7 @@ app.get('/', (req, res) => {
                     document.getElementById('main-interface').style.display = 'grid';
 
                 } catch (err) {
-                    alert(err.message || "Impossible de charger le profil complet de ce joueur.");
+                    alert(err.message || "Impossible de charger le profil de ce joueur.");
                 }
             }
         </script>
@@ -360,7 +366,7 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. BACKEND API : Récupération sécurisée et complète
+// 2. BACKEND API
 app.get('/api/player/:pseudo', async (req, res) => {
     try {
         const name = req.params.pseudo;
@@ -404,22 +410,14 @@ app.get('/api/player/:pseudo', async (req, res) => {
 
     } catch (error) {
         console.error("Erreur API Mojang:", error.message);
-        
-        // Gestion propre si le joueur n'existe pas du tout
         if (error.response && error.response.status === 404) {
             return res.status(404).json({ error: "Ce pseudo n'existe pas." });
         }
-        
-        // Alerte explicite si Render s'est fait bannir son IP par Mojang (Erreurs 429 ou 403)
-        if (error.response && (error.response.status === 429 || error.response.status === 403)) {
-            return res.status(503).json({ error: "L'hébergeur Render est temporairement bloqué par Mojang. Réessaye plus tard." });
-        }
-        
-        return res.status(500).json({ error: "Erreur lors de la récupération des données de l'API." });
+        return res.status(500).json({ error: "Erreur de communication avec Mojang. Réessaye." });
     }
 });
 
-// 3. LANCEMENT DU SERVEUR (Ce qui manquait à la fin de ton fichier)
+// 3. ENFIN : Fermeture et lancement du port (Ce qui manquait à la fin !)
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`Serveur actif sur le port ${PORT}`);
