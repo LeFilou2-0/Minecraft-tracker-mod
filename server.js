@@ -23,6 +23,7 @@ app.get('/', (req, res) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Minecraft Tracker - NameMC Edition</title>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/skinview3d@2.1.2/dist/skinview3d.bundle.js"></script>
         <style>
             :root {
                 --bg: #08080c;
@@ -173,7 +174,7 @@ app.get('/', (req, res) => {
             .info-value { font-weight: 600; }
             .info-value.neon { color: var(--accent); }
 
-            /* Colonne Droite - Grand rendu de Skin 3D */
+            /* Colonne Droite - Grand rendu de Skin VRAI 3D */
             .skin-render-box {
                 grid-row: span 2;
                 display: flex;
@@ -184,15 +185,15 @@ app.get('/', (req, res) => {
                 position: relative;
             }
 
-            .skin-3d-img {
-                max-height: 380px;
-                object-fit: contain;
-                filter: drop-shadow(0 20px 30px rgba(0,0,0,0.7));
-                transition: transform 0.3s;
+            /* Zone Canvas pour le contrôle à la souris */
+            #skin-viewer {
+                width: 100%;
+                height: 380px;
+                cursor: grab;
+                outline: none;
             }
-
-            .skin-3d-img:hover {
-                transform: scale(1.03);
+            #skin-viewer:active {
+                cursor: grabbing;
             }
 
             /* Bloc Capes personnalisé */
@@ -306,9 +307,9 @@ app.get('/', (req, res) => {
 
             <div class="panel skin-render-box">
                 <div class="panel-title" style="position: absolute; top: 24px; left: 24px;">
-                    <i class="fa-solid fa-cube"></i> Rendu 3D du Skin
+                    <i class="fa-solid fa-cube"></i> Rendu 3D Interactif
                 </div>
-                <img id="skin-3d" class="skin-3d-img" src="" alt="Rendu Complet">
+                <canvas id="skin-viewer"></canvas>
             </div>
 
             <div class="panel">
@@ -326,6 +327,9 @@ app.get('/', (req, res) => {
         </div>
 
         <script>
+            // Variable globale pour conserver l'instance 3D
+            let skinViewerInstance = null;
+
             async function trackPlayer() {
                 const pseudo = document.getElementById('username').value.trim();
                 if(!pseudo) return;
@@ -340,15 +344,39 @@ app.get('/', (req, res) => {
                     document.getElementById('player-name').innerText = data.pseudo;
                     document.getElementById('player-uuid').innerText = data.uuid;
                     
-                    // Stats issus de ton mod .jar
+                    // Stats issues de ton mod .jar
                     document.getElementById('player-time').innerText = data.stats.totalTime + " min";
                     document.getElementById('player-server').innerText = data.stats.lastServer;
                     document.getElementById('player-last-login').innerText = data.stats.lastLogin;
 
-                    // 2. Remplissage du grand corps complet en 3D Isométrique (VRAI 3D)
-                    document.getElementById('skin-3d').src = "https://visage.surgeplay.com/full/400/" + data.uuid;
+                    // 2. INITIALISATION OU MISE A JOUR DU COMPOSANT VRAI 3D (Type NameMC)
+                    const skinTexture = data.skinUrl || "https://textures.minecraft.net/texture/1a12bc553b965b263b6107eb1b5042643a6d956e18751347000788647ba944";
+                    
+                    if (!skinViewerInstance) {
+                        skinViewerInstance = new skinview3d.SkinViewer({
+                            canvas: document.getElementById('skin-viewer'),
+                            width: 320,
+                            height: 380,
+                            skin: skinTexture
+                        });
+                        
+                        // Active une animation fluide de respiration lente
+                        skinViewerInstance.animation = new skinview3d.IdleAnimation();
+                        // Bloque le zoom molette pour éviter de casser le défilement de la page
+                        skinViewerInstance.controls.enableZoom = false;
+                    } else {
+                        // Si le viewer existe déjà, on charge juste la texture du nouveau joueur recherché
+                        skinViewerInstance.loadSkin(skinTexture);
+                    }
 
-                    // 3. Gestion dynamique des capes (Design épuré)
+                    // Prise en compte de la cape directement posée sur le dos du modèle 3D !
+                    if (data.capeUrl) {
+                        skinViewerInstance.loadCape(data.capeUrl);
+                    } else {
+                        skinViewerInstance.loadCape(null);
+                    }
+
+                    // 3. Gestion dynamique de la liste des capes (Design épuré sous le profil)
                     const capeWrapper = document.getElementById('cape-wrapper');
                     if (data.capeUrl) {
                         capeWrapper.innerHTML = \`
@@ -360,9 +388,9 @@ app.get('/', (req, res) => {
                         capeWrapper.innerHTML = '<span class="no-cape">Aucune cape détectée sur ce compte.</span>';
                     }
 
-                    // 4. Génération de l'historique des skins (façon NameMC)
+                    // 4. Génération de l'historique des skins
                     const historyWrapper = document.getElementById('history-wrapper');
-                    historyWrapper.innerHTML = ''; // Clear ancien
+                    historyWrapper.innerHTML = ''; // Nettoyage
 
                     const skinTemplates = [
                         { label: "Actuel", date: "Aujourd'hui" },
@@ -373,7 +401,6 @@ app.get('/', (req, res) => {
                     skinTemplates.forEach((skin, index) => {
                         const card = document.createElement('div');
                         card.className = 'history-card';
-                        // CORRECTION ICI : Ajout de l'anti-slash devant data.uuid pour éviter le crash Node.js
                         card.innerHTML = \`
                             <div class="history-number">\${skin.label}</div>
                             <img src="https://visage.surgeplay.com/bust/120/\${data.uuid}" alt="Skin body">
@@ -438,25 +465,3 @@ app.get('/api/player/:pseudo', async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({ error: "Erreur API Mojang" });
-    }
-});
-
-// 3. RECEPTION DES REQUÊTES DU MOD JAR
-app.post('/api/update-stats', (req, res) => {
-    const { uuid, serverIp, playTimeDelta } = req.body;
-    if(!uuid) return res.status(400).send("UUID manquant");
-    
-    if(!database[uuid]) {
-        database[uuid] = { totalTime: 0, lastServer: "", lastLogin: "" };
-    }
-    database[uuid].totalTime += playTimeDelta;
-    database[uuid].lastServer = serverIp;
-    database[uuid].lastLogin = new Date().toLocaleDateString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    
-    res.status(200).json({ status: "synced" });
-});
-
-app.listen(3000, () => {
-    console.log("==> Interface NameMC prête sur http://localhost:3000");
-});
