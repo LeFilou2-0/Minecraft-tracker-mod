@@ -23,7 +23,21 @@ app.get('/', (req, res) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Minecraft Tracker - NameMC Edition</title>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-        <script src="https://unpkg.com/skinview3d@2.1.2/dist/skinview3d.bundle.js"></script>
+        
+        <script src="https://fastly.jsdelivr.net/npm/skinview3d@2.1.2/dist/skinview3d.bundle.js"></script>
+        <script>
+            if (typeof skinview3d === 'undefined') {
+                // Si Fastly est bloqué, on tente GCore
+                document.write('<script src="https://gcore.jsdelivr.net/npm/skinview3d@2.1.2/dist/skinview3d.bundle.js"><\\/script>');
+            }
+        </script>
+        <script>
+            if (typeof skinview3d === 'undefined') {
+                // Si GCore est aussi bloqué, on tente un troisième miroir (Unpkg alternatif)
+                document.write('<script src="https://unpkg.com/skinview3d@2.1.2/bundle/skinview3d.bundle.js"><\\/script>');
+            }
+        </script>
+
         <style>
             :root {
                 --bg: #08080c;
@@ -275,9 +289,8 @@ app.get('/', (req, res) => {
                 const pseudo = document.getElementById('username').value.trim();
                 if(!pseudo) return;
 
-                // Sécurité si le script externe n'a pas pu charger du tout
                 if (typeof skinview3d === 'undefined') {
-                    alert("Erreur de connexion : Impossible de charger le moteur de rendu 3D. Vérifie ta connexion internet.");
+                    alert("Erreur de connexion : Impossible de charger le moteur de rendu 3D. Vérifie ta connexion internet ou change de réseau.");
                     return;
                 }
 
@@ -285,7 +298,7 @@ app.get('/', (req, res) => {
                     const response = await fetch('/api/player/' + pseudo);
                     if(!response.ok) {
                         const errorData = await response.json();
-                        throw new Error(errorData.error || "Joueur introuvable ou problème API.");
+                        throw new Error(errorData.error || "Joueur introuvable.");
                     }
                     const data = await response.json();
 
@@ -310,7 +323,7 @@ app.get('/', (req, res) => {
                         skinViewerInstance.animation = new skinview3d.IdleAnimation();
                         skinViewerInstance.controls.enableZoom = false;
 
-                        // AJOUT : Fait tourner automatiquement le skin pour voir le dos et la cape !
+                        // Rotation continue automatique activée !
                         skinViewerInstance.autoRotate = true;
                         skinViewerInstance.autoRotateSpeed = 0.6;
                     } else {
@@ -357,7 +370,7 @@ app.get('/', (req, res) => {
                     document.getElementById('main-interface').style.display = 'grid';
 
                 } catch (err) {
-                    alert(err.message || "Impossible de charger le profil de ce joueur.");
+                    alert(err.message || "Impossible de charger le profil.");
                 }
             }
         </script>
@@ -417,7 +430,7 @@ app.get('/api/player/:pseudo', async (req, res) => {
     }
 });
 
-// 3. ENFIN : Fermeture et lancement du port (Ce qui manquait à la fin !)
+// 3. ECOUTE DU PORT
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`Serveur actif sur le port ${PORT}`);
