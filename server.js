@@ -4,7 +4,7 @@ const app = express();
 
 app.use(express.json());
 
-// Simulation de la base de données locale (Mod .jar)
+// Base de données temporaire en mémoire
 let database = {
     "db09281a8b34479e9da2482348239482": { 
         totalTime: 1250, 
@@ -13,7 +13,7 @@ let database = {
     }
 };
 
-// 1. INTERFACE GRAPHIQUE STYLE NAMEMC x V2 NEON
+// 1. INTERFACE GRAPHIQUE STYLE NAMEMC (Rendu Fixe Ultra-Fiable)
 app.get('/', (req, res) => {
     res.send(`
     <!DOCTYPE html>
@@ -46,7 +46,6 @@ app.get('/', (req, res) => {
                 background: radial-gradient(circle at top, #11111e 0%, #050508 100%);
             }
 
-            /* Barre de recherche supérieure */
             .search-box {
                 display: flex;
                 gap: 12px;
@@ -89,17 +88,15 @@ app.get('/', (req, res) => {
                 box-shadow: 0 6px 20px rgba(163, 230, 53, 0.25);
             }
 
-            /* Conteneur principal en Grille (Style NameMC) */
             .namemc-grid {
                 display: grid;
                 grid-template-columns: 1fr 1.2fr;
                 gap: 24px;
                 width: 100%;
                 max-width: 1000px;
-                display: none; /* Masqué avant la recherche */
+                display: none;
             }
 
-            /* Blocs/Briques modulaires */
             .panel {
                 background: var(--panel-bg);
                 border: 1px solid var(--border);
@@ -122,11 +119,8 @@ app.get('/', (req, res) => {
                 gap: 8px;
             }
 
-            .panel-title i {
-                color: var(--accent);
-            }
+            .panel-title i { color: var(--accent); }
 
-            /* Colonne Gauche - Infos de profil */
             .profile-header {
                 display: flex;
                 align-items: center;
@@ -143,11 +137,7 @@ app.get('/', (req, res) => {
                 border: 1px solid var(--border);
             }
 
-            .profile-title h1 {
-                margin: 0;
-                font-size: 28px;
-                letter-spacing: -0.5px;
-            }
+            .profile-title h1 { margin: 0; font-size: 28px; letter-spacing: -0.5px; }
 
             .uuid-badge {
                 font-family: monospace;
@@ -173,7 +163,6 @@ app.get('/', (req, res) => {
             .info-value { font-weight: 600; }
             .info-value.neon { color: var(--accent); }
 
-            /* Colonne Droite - Grand rendu de Skin 3D */
             .skin-render-box {
                 grid-row: span 2;
                 display: flex;
@@ -181,27 +170,15 @@ app.get('/', (req, res) => {
                 align-items: center;
                 justify-content: center;
                 min-height: 450px;
-                position: relative;
             }
 
-            .skin-3d-img {
+            .skin-display {
                 max-height: 380px;
                 object-fit: contain;
-                filter: drop-shadow(0 20px 30px rgba(0,0,0,0.7));
-                transition: transform 0.3s;
+                filter: drop-shadow(0 12px 24px rgba(0,0,0,0.6));
             }
 
-            .skin-3d-img:hover {
-                transform: scale(1.03);
-            }
-
-            /* Bloc Capes personnalisé */
-            .cape-container {
-                display: flex;
-                gap: 12px;
-                flex-wrap: wrap;
-            }
-
+            .cape-container { display: flex; gap: 12px; flex-wrap: wrap; }
             .cape-item {
                 background: rgba(163, 230, 53, 0.04);
                 border: 1px dashed var(--accent);
@@ -215,22 +192,9 @@ app.get('/', (req, res) => {
                 font-weight: bold;
             }
 
-            .no-cape {
-                color: var(--text-muted);
-                font-size: 14px;
-                font-style: italic;
-            }
-
-            /* Ligne du bas - Historique des Skins */
-            .history-box {
-                grid-column: span 2;
-            }
-
-            .history-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-                gap: 16px;
-            }
+            .no-cape { color: var(--text-muted); font-size: 14px; font-style: italic; }
+            .history-box { grid-column: span 2; }
+            .history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
 
             .history-card {
                 background: rgba(255,255,255,0.01);
@@ -239,36 +203,11 @@ app.get('/', (req, res) => {
                 padding: 16px;
                 text-align: center;
                 position: relative;
-                transition: all 0.2s;
             }
 
-            .history-card:hover {
-                border-color: var(--accent);
-                background: rgba(163, 230, 53, 0.01);
-            }
-
-            .history-card img {
-                height: 120px;
-                object-fit: contain;
-                margin-bottom: 10px;
-            }
-
-            .history-number {
-                position: absolute;
-                top: 10px;
-                left: 10px;
-                font-size: 11px;
-                font-weight: bold;
-                background: rgba(255,255,255,0.05);
-                padding: 2px 6px;
-                border-radius: 4px;
-                color: var(--text-muted);
-            }
-
-            .history-date {
-                font-size: 12px;
-                color: var(--text-muted);
-            }
+            .history-card img { height: 120px; object-fit: contain; margin-bottom: 10px; }
+            .history-number { position: absolute; top: 10px; left: 10px; font-size: 11px; font-weight: bold; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; color: var(--text-muted); }
+            .history-date { font-size: 12px; color: var(--text-muted); }
         </style>
     </head>
     <body>
@@ -279,7 +218,6 @@ app.get('/', (req, res) => {
         </div>
 
         <div class="namemc-grid" id="main-interface">
-            
             <div class="panel">
                 <div class="profile-header">
                     <img id="player-head" class="mini-avatar" src="" alt="Tête">
@@ -305,24 +243,21 @@ app.get('/', (req, res) => {
             </div>
 
             <div class="panel skin-render-box">
-                <div class="panel-title" style="position: absolute; top: 24px; left: 24px;">
-                    <i class="fa-solid fa-cube"></i> Rendu 3D du Skin
+                <div class="panel-title" style="align-self: flex-start; margin-bottom: auto;">
+                    <i class="fa-solid fa-cube"></i> Visuel du Personnage
                 </div>
-                <img id="skin-3d" class="skin-3d-img" src="" alt="Rendu Complet">
+                <img id="skin-img" class="skin-display" src="" alt="Skin Minecraft">
             </div>
 
             <div class="panel">
                 <div class="panel-title"><i class="fa-solid fa-shield-halved"></i> Capes Alignées</div>
-                <div id="cape-wrapper" class="cape-container">
-                    </div>
+                <div id="cape-wrapper" class="cape-container"></div>
             </div>
 
             <div class="panel history-box">
                 <div class="panel-title"><i class="fa-solid fa-clock-rotate-left"></i> Historique des Skins</div>
-                <div class="history-grid" id="history-wrapper">
-                    </div>
+                <div class="history-grid" id="history-wrapper"></div>
             </div>
-
         </div>
 
         <script>
@@ -335,34 +270,33 @@ app.get('/', (req, res) => {
                     if(!response.ok) throw new Error();
                     const data = await response.json();
 
-                    // 1. Remplissage du Bloc Profil
+                    // Mise à jour des textes et avatars basiques
                     document.getElementById('player-head').src = "https://mc-heads.net/avatar/" + data.uuid + "/64";
                     document.getElementById('player-name').innerText = data.pseudo;
                     document.getElementById('player-uuid').innerText = data.uuid;
                     
-                    // Stats issus de ton mod .jar
                     document.getElementById('player-time').innerText = data.stats.totalTime + " min";
                     document.getElementById('player-server').innerText = data.stats.lastServer;
                     document.getElementById('player-last-login').innerText = data.stats.lastLogin;
 
-                    // 2. Remplissage du grand corps complet en 3D Isométrique (VRAI 3D)
-                    document.getElementById('skin-3d').src = "https://visage.surgeplay.com/full/400/" + data.uuid;
+                    // Image du corps entier fixe (Générée côté API)
+                    document.getElementById('skin-img').src = "https://mc-heads.net/body/" + data.uuid + "/300";
 
-                    // 3. Gestion dynamique des capes (Design épuré)
+                    // Gestion de la cape
                     const capeWrapper = document.getElementById('cape-wrapper');
                     if (data.capeUrl) {
-                        capeWrapper.innerHTML = \`
+                        capeWrapper.innerHTML = `
                             <div class="cape-item">
                                 <i class="fa-solid fa-gavel"></i> Cape Officielle Mojang
                             </div>
-                        \`;
+                        `;
                     } else {
                         capeWrapper.innerHTML = '<span class="no-cape">Aucune cape détectée sur ce compte.</span>';
                     }
 
-                    // 4. Génération de l'historique des skins (façon NameMC)
+                    // Historique (Buste)
                     const historyWrapper = document.getElementById('history-wrapper');
-                    historyWrapper.innerHTML = ''; // Clear ancien
+                    historyWrapper.innerHTML = ''; 
 
                     const skinTemplates = [
                         { label: "Actuel", date: "Aujourd'hui" },
@@ -370,23 +304,21 @@ app.get('/', (req, res) => {
                         { label: "#1", date: "Création" }
                     ];
 
-                    skinTemplates.forEach((skin, index) => {
+                    skinTemplates.forEach((skin) => {
                         const card = document.createElement('div');
                         card.className = 'history-card';
-                        // CORRECTION ICI : Ajout de l'anti-slash devant data.uuid pour éviter le crash Node.js
                         card.innerHTML = \`
                             <div class="history-number">\${skin.label}</div>
-                            <img src="https://visage.surgeplay.com/bust/120/\${data.uuid}" alt="Skin body">
+                            <img src="https://mc-heads.net/player/\${data.uuid}/120" alt="Skin body">
                             <div class="history-date">\${skin.date}</div>
                         \`;
                         historyWrapper.appendChild(card);
                     });
 
-                    // Rendre visible toute la structure NameMC d'un coup
                     document.getElementById('main-interface').style.display = 'grid';
 
                 } catch (err) {
-                    alert("Impossible de charger le profil complet de ce joueur.");
+                    alert("Impossible de trouver ce joueur ou erreur serveur.");
                 }
             }
         </script>
@@ -395,33 +327,21 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. BACKEND API : Récupération sécurisée et complète
+// 2. RECHERCHE DE JOUEUR (Bypass des restrictions Render via Ashcon)
 app.get('/api/player/:pseudo', async (req, res) => {
     try {
         const name = req.params.pseudo;
+        const response = await axios.get(`https://api.ashcon.app/mojang/v2/user/${name}`);
         
-        const profileRes = await axios.get(`https://api.mojang.com/users/profiles/minecraft/${name}`);
-        if (!profileRes.data || !profileRes.data.id) {
+        if (!response.data || !response.data.uuid) {
             return res.status(404).json({ error: "Joueur introuvable" });
         }
-        const uuid = profileRes.data.id;
-        const exactPseudo = profileRes.data.name;
 
-        const sessionRes = await axios.get(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}`);
-        
-        let skinUrl = null;
-        let capeUrl = null;
-
-        if (sessionRes.data && sessionRes.data.properties) {
-            const textureProp = sessionRes.data.properties.find(p => p.name === 'textures');
-            if (textureProp) {
-                const texturesJson = JSON.parse(Buffer.from(textureProp.value, 'base64').toString('utf-8'));
-                if (texturesJson.textures) {
-                    skinUrl = texturesJson.textures.SKIN?.url || null;
-                    capeUrl = texturesJson.textures.CAPE?.url || null;
-                }
-            }
-        }
+        const data = response.data;
+        const uuid = data.uuid.replace(/-/g, ''); // Format propre sans tirets pour correspondre à la BDD
+        const exactPseudo = data.username;
+        const skinUrl = data.textures?.skin?.url || null;
+        const capeUrl = data.textures?.cape?.url || null;
 
         const localData = database[uuid] || { 
             totalTime: 0, 
@@ -438,7 +358,7 @@ app.get('/api/player/:pseudo', async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({ error: "Erreur API Mojang" });
+        res.status(500).json({ error: "Erreur lors de la récupération du profil Mojang." });
     }
 });
 
@@ -447,16 +367,26 @@ app.post('/api/update-stats', (req, res) => {
     const { uuid, serverIp, playTimeDelta } = req.body;
     if(!uuid) return res.status(400).send("UUID manquant");
     
-    if(!database[uuid]) {
-        database[uuid] = { totalTime: 0, lastServer: "", lastLogin: "" };
+    // Nettoyage de l'UUID envoyé par le mod au cas où il contient des tirets
+    const cleanUuid = uuid.replace(/-/g, '');
+
+    if(!database[cleanUuid]) {
+        database[cleanUuid] = { totalTime: 0, lastServer: "", lastLogin: "" };
     }
-    database[uuid].totalTime += playTimeDelta;
-    database[uuid].lastServer = serverIp;
-    database[uuid].lastLogin = new Date().toLocaleDateString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     
-    res.status(200).json({ status: "synced" });
+    database[cleanUuid].totalTime += playTimeDelta;
+    database[cleanUuid].lastServer = serverIp || "Solo / Local";
+    database[cleanUuid].lastLogin = new Date().toLocaleDateString('fr-FR', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+
+    console.log(`[MOD SINC] Données reçues pour ${cleanUuid} : +${playTimeDelta} min sur ${serverIp}`);
+    res.status(200).send("Stats mises à jour avec succès !");
 });
 
-app.listen(3000, () => {
-    console.log("==> Interface NameMC prête sur http://localhost:3000");
+// 4. OUVERTURE DU PORT SERVEUR
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+    console.log(`Serveur en écoute sur le port ${PORT}`);
 });
