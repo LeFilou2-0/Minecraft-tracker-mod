@@ -4,14 +4,20 @@ const app = express();
 
 app.use(express.json());
 
-// Simulation de la base de données locale
 let database = {
-    "db09281a8b34479e9da2482348239482": { 
-        totalTime: 1250, 
-        lastServer: "mc.hypixel.net", 
-        lastLogin: "Il y a 10 minutes" 
-    }
+    "db09281a8b34479e9da2482348239482": { totalTime: 1250, lastServer: "mc.hypixel.net", lastLogin: "Il y a 10 minutes" }
 };
+
+// Route pour servir directement la bibliothèque skinview3d depuis ton propre serveur
+app.get('/skinview3d.bundle.js', async (req, res) => {
+    try {
+        const bundle = await axios.get('https://unpkg.com/skinview3d@3.0.1/dist/skinview3d.bundle.js');
+        res.setHeader('Content-Type', 'application/javascript');
+        res.send(bundle.data);
+    } catch (err) {
+        res.status(500).send("// Erreur de téléchargement du bundle 3D");
+    }
+});
 
 app.get('/', (req, res) => {
     res.send(`
@@ -20,7 +26,7 @@ app.get('/', (req, res) => {
     <head>
         <meta charset="UTF-8">
         <title>Minecraft Tracker - Debug</title>
-        <script src="https://unpkg.com/skinview3d@3.0.1/dist/skinview3d.bundle.js"></script>
+        <script src="/skinview3d.bundle.js"></script>
         <style>
             body { background: #08080c; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
             .search-box { margin-bottom: 30px; }
@@ -39,44 +45,41 @@ app.get('/', (req, res) => {
 
             async function trackPlayer() {
                 alert("ÉTAPE 1 : Clic détecté");
-                
                 const pseudo = document.getElementById('username').value.trim();
                 
                 if (typeof skinview3d === 'undefined') {
-                    alert("ERREUR : skinview3d non chargé !");
+                    alert("ERREUR : skinview3d refuse toujours de charger sur cet iPad.");
                     return;
                 }
-                alert("ÉTAPE 2 : skinview3d est bien chargé");
+                alert("ÉTAPE 2 : Moteur 3D local validé !");
 
                 try {
-                    alert("ÉTAPE 3 : Appel API en cours...");
+                    alert("ÉTAPE 3 : Envoi requête backend...");
                     const response = await fetch('/api/player/' + pseudo);
                     
                     if(!response.ok) {
-                        alert("ERREUR HTTP : " + response.status);
+                        alert("ERREUR HTTP SERVEUR : " + response.status);
                         return;
                     }
 
                     const data = await response.json();
-                    alert("ÉTAPE 4 : Données reçues pour " + data.pseudo);
+                    alert("ÉTAPE 4 : Joueur trouvé -> " + data.pseudo);
 
-                    const skinTexture = data.skinUrl || "https://textures.minecraft.net/texture/1a12bc553b965b263b6107eb1b5042643a6d956e18751347000788647ba944";
-                    
                     if (!skinViewerInstance) {
                         skinViewerInstance = new skinview3d.SkinViewer({
                             canvas: document.getElementById('skin-viewer'),
                             width: 300,
                             height: 400,
-                            skin: skinTexture
+                            skin: data.skinUrl || "https://textures.minecraft.net/texture/1a12bc553b965b263b6107eb1b5042643a6d956e18751347000788647ba944"
                         });
                         skinViewerInstance.animation = new skinview3d.IdleAnimation();
                     } else {
-                        skinViewerInstance.loadSkin(skinTexture);
+                        skinViewerInstance.loadSkin(data.skinUrl);
                     }
-                    alert("ÉTAPE 5 : Rendu 3D terminé");
+                    alert("ÉTAPE 5 : Rendu injecté avec succès !");
 
                 } catch (err) {
-                    alert("ERREUR FATALE : " + err.message);
+                    alert("ERREUR SCRIPT CRASH : " + err.message);
                 }
             }
         </script>
@@ -87,11 +90,11 @@ app.get('/', (req, res) => {
 
 app.get('/api/player/:pseudo', async (req, res) => {
     const name = req.params.pseudo;
-    console.log("Requête reçue pour :", name);
+    console.log("Pseudo demandé :", name);
 
     try {
+        // Utilisation de Ashcon car l'API Mojang de base bloque les requêtes provenant de Render
         const response = await axios.get("https://api.ashcon.app/mojang/v2/user/" + name);
-        
         const data = response.data;
         const uuid = data.uuid.replace(/-/g, '');
         
@@ -100,13 +103,13 @@ app.get('/api/player/:pseudo', async (req, res) => {
             uuid: uuid,
             skinUrl: data.textures?.skin?.url || null
         });
-        console.log("Réponse envoyée avec succès.");
+        console.log("Statut : Succès pour", name);
 
     } catch (error) {
-        console.error("Erreur serveur :", error.message);
+        console.error("Erreur API :", error.message);
         res.status(500).json({ error: error.message });
     }
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log("Serveur démarré sur port " + PORT));
+app.listen(PORT, () => console.log("Serveur en ligne : " + PORT));
