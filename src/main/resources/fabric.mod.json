@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "mctracker",
+  "version": "${version}",
+  "name": "Minecraft Tracker",
+  "description": "Envoie le temps de jeu et le serveur actuel à ton API Render.",
+  "authors": [ "LeFilou" ],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "main": [
+      "com.filou.tracker.TrackerMod"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.15.7",
+    "minecraft": "~1.20.4",
+    "java": ">=17"
+  }
+}
