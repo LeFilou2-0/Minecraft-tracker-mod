@@ -1,0 +1,17 @@
+plugins {
+    id 'fabric-loom' version '1.6-SNAPSHOT'
+}
+version = project.mod_version
+group = "com.filou.tracker"
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    fabricApi "net.fabricmc.fabric-api:fabric-api:0.92.0+1.20.4"
+}
+processResources {
+    inputs.property "version", project.version
+    filteringCharset "UTF-8"
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
